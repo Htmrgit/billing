@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📊 Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    /* Body and Container Styling */
+    body {
+      background-color: #f5f5f5;
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      margin: 0;
+      padding: 20px;
+      width: 100%;
+      max-width: 1200px;
+      flex-direction: column;
+    }
+
+    /* Header Styling (for buttons) */
+    .header {
+      display: flex;
+      justify-content: flex-end;
+      gap: 15px;
+      margin-bottom: 20px;
+      padding: 10px;
+    }
+
+    .header button {
+      padding: 10px 20px;
+      background-color: #16a085;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header button:hover {
+      background-color: #1abc9c;
+    }
+
+    /* Sidebar Styling */
+    .sidebar {
+      width: 250px;
+      background-color: #34495e;
+      color: white;
+      padding: 20px;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 100;
+    }
+
+    .sidebar ul li a {
+      color: white;
+      text-decoration: none;
+      display: block;
+      padding: 10px;
+      border-radius: 5px;
+      margin: 10px 0;
+      transition: 0.3s;
+    }
+
+    .sidebar ul li a:hover {
+      background-color: #16a085;
+    }
+
+    /* Content Styling */
+    .content {
+      margin-left: 270px;
+      padding: 30px;
+      flex-grow: 1;
+      height: 100%;
+      overflow: auto;
+    }
+
+    /* Stats container */
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+
+    .card {
+      background-color: #ffffff;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      width: 23%;
+      transition: all 0.3s ease;
+      min-width: 220px;
+    }
+
+    .card:hover {
+      background-color: #ecf0f1;
+    }
+
+    .card h3 {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .card p {
+      font-size: 28px;
+      margin: 10px 0;
+    }
+
+    /* Color schemes */
+    .totalBills { background-color: #f39c12; }
+    .totalPayments { background-color: #e74c3c; }
+    .matched { background-color: #2ecc71; }
+    .pending { background-color: #9b59b6; }
+
+    /* Filter styling */
+    label, input {
+      margin-bottom: 10px;
+      display: inline-block;
+      font-size: 16px;
+    }
+
+    input[type="date"] {
+      padding: 8px;
+      width: 200px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header with Logout and Fullscreen Buttons -->
+    <div class="header">
+      <button onclick="logout()">
+        <span>🔒 Logout</span>
+      </button>
+      <button onclick="toggleFullscreen()">
+        <span>📺 Fullscreen</span>
+      </button>
+    </div>
+
+    <div class="container">
+      <aside class="sidebar">
+        <h2>📘 Menu</h2>
+        <nav>
+          <ul>
+            <li><a href="dashboard.html" class="active">📊 Dashboard</a></li>
+            <li><a href="bill.html">🧾 Bill Entry</a></li>
+            <li><a href="payment.html">💰 Payment Entry</a></li>
+            <li><a href="match.html">🔄 Match Payments</a></li>
+            <li><a href="pending.html">🕒 Pending</a></li>
+            <li><a href="report.html">🖨️ Reports</a></li>
+            <li><button onclick="resetAll()">🧹 Reset All</button></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <h2>📊 Dashboard</h2>
+
+        <label for="filterDate">📅 Filter by Date:</label>
+        <input type="date" id="filterDate" onchange="renderDashboard()" />
+
+        <div class="stats">
+          <div class="card totalBills">
+            <h3>Total Bills</h3>
+            <p id="totalBills">0</p>
+          </div>
+          <div class="card totalPayments">
+            <h3>Total Payments</h3>
+            <p id="totalPayments">0</p>
+          </div>
+          <div class="card matched">
+            <h3>Matched</h3>
+            <p id="matchedCount">0</p>
+          </div>
+          <div class="card pending">
+            <h3>Pending</h3>
+            <p id="pendingCount">0</p>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    function renderDashboard() {
+      const filterDate = document.getElementById("filterDate").value;
+      const bills = JSON.parse(localStorage.getItem("bills") || "[]");
+      const payments = JSON.parse(localStorage.getItem("payments") || "[]");
+
+      let filteredBills = bills;
+      let filteredPayments = payments;
+
+      if (filterDate) {
+        filteredBills = bills.filter(b => b.date === filterDate);
+        filteredPayments = payments.filter(p => p.date === filterDate);
+      }
+
+      let matchedCount = 0;
+      let pendingCount = 0;
+
+      const usedBills = new Set();
+
+      filteredPayments.forEach(p => {
+        const match = filteredBills.find(b => b.amount === p.amount && !usedBills.has(b.billNo));
+        if (match) {
+          matchedCount++;
+          usedBills.add(match.billNo);
+        } else {
+          pendingCount++;
+        }
+      });
+
+      document.getElementById("totalBills").textContent = filteredBills.length;
+      document.getElementById("totalPayments").textContent = filteredPayments.length;
+      document.getElementById("matchedCount").textContent = matchedCount;
+      document.getElementById("pendingCount").textContent = pendingCount;
+    }
+
+    function logout() {
+      // Clear localStorage or session storage
+      localStorage.clear();
+      // Redirect to login page
+      window.location.href = "login.html";
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    renderDashboard();
+  </script>
+
+</body>
+</html>

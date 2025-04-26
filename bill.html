@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🧾 Bill Entry</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .form-section {
+      background: #f9f9ff;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .form-section input, .form-section button {
+      margin: 10px 10px 10px 0;
+      padding: 10px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    .form-section button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+    th {
+      background-color: #e0f7fa;
+    }
+    body {
+      background: #eaf3ff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>📘 Menu</h2>
+      <nav>
+        <ul>
+          <li><a href="dashboard.html">📊 Dashboard</a></li>
+          <li><a href="bill.html">🧾 Bill Entry</a></li>
+          <li><a href="payment.html">💰 Payment Entry</a></li>
+          <li><a href="match.html">🔄 Match Payments</a></li>
+          <li><a href="pending.html">🕒 Pending</a></li>
+          <li><a href="report.html">🖨️ Reports</a></li>
+          <li><button onclick="resetAll()">🧹 Reset All</button></li>
+        </ul>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <h2>🧾 Bill Entry</h2>
+
+      <div class="form-section">
+        <form id="billForm">
+          <input type="text" id="billNo" placeholder="Bill Number" required />
+          <input type="number" id="billAmount" placeholder="Amount" required />
+          <input type="date" id="billDate" required />
+          <input type="hidden" id="billIndex" />
+          <button type="submit">💾 Save Bill</button>
+        </form>
+      </div>
+
+      <h3>📄 Saved Bills</h3>
+      <table id="billTable">
+        <thead>
+          <tr>
+            <th>Bill No</th>
+            <th>Amount</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    const billDateInput = document.getElementById("billDate");
+
+    function setYesterdayDate(input) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const formatted = yesterday.toISOString().split("T")[0];
+      input.value = formatted;
+    }
+
+    document.getElementById("billForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const billNo = document.getElementById("billNo").value;
+      const amount = parseFloat(document.getElementById("billAmount").value);
+      const date = billDateInput.value;
+      const index = document.getElementById("billIndex").value;
+
+      const bills = JSON.parse(localStorage.getItem("bills") || "[]");
+      const billData = { billNo, amount, date };
+
+      if (index === "") {
+        bills.push(billData);
+      } else {
+        bills[parseInt(index)] = billData;
+      }
+
+      localStorage.setItem("bills", JSON.stringify(bills));
+      document.getElementById("billForm").reset();
+      billDateInput.value = date; // retain date
+      renderBillTable();
+    });
+
+    function renderBillTable() {
+      const tbody = document.querySelector("#billTable tbody");
+      const bills = JSON.parse(localStorage.getItem("bills") || "[]");
+      tbody.innerHTML = "";
+
+      bills.forEach((bill, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${bill.billNo}</td>
+          <td>${bill.amount}</td>
+          <td>${bill.date}</td>
+          <td>
+            <button onclick="editBill(${index})">✏️</button>
+            <button onclick="deleteBill(${index})">🗑️</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function editBill(index) {
+      const bills = JSON.parse(localStorage.getItem("bills") || "[]");
+      const b = bills[index];
+      document.getElementById("billNo").value = b.billNo;
+      document.getElementById("billAmount").value = b.amount;
+      billDateInput.value = b.date;
+      document.getElementById("billIndex").value = index;
+    }
+
+    function deleteBill(index) {
+      const bills = JSON.parse(localStorage.getItem("bills") || "[]");
+      bills.splice(index, 1);
+      localStorage.setItem("bills", JSON.stringify(bills));
+      renderBillTable();
+    }
+
+    // Set yesterday date on page load
+    setYesterdayDate(billDateInput);
+    renderBillTable();
+  </script>
+</body>
+</html>

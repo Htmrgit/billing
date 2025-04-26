@@ -1,0 +1,169 @@
+<!-- Save as: report.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🖨️ Reports</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>📘 Menu</h2>
+      <nav>
+        <ul>
+          <li><a href="dashboard.html">📊 Dashboard</a></li>
+          <li><a href="bill.html">🧾 Bill Entry</a></li>
+          <li><a href="payment.html">💰 Payment Entry</a></li>
+          <li><a href="match.html">🔄 Match Payments</a></li>
+          <li><a href="pending.html">🕒 Pending</a></li>
+          <li><a href="report.html">🖨️ Reports</a></li>
+          <li><button onclick="resetAll()">🧹 Reset All</button></li>
+        </ul>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <h2>🖨️ Generate Report</h2>
+      <button onclick="generateReport()">Generate PDF Report</button>
+
+      <div id="reportSection" style="display:none;">
+        <h3>Report Date: <span id="reportDate"></span></h3>
+
+        <h3>Matched Payments</h3>
+        <table id="matchedTableReport">
+          <thead>
+            <tr>
+              <th>Bill No</th>
+              <th>Bill Amount</th>
+              <th>Bill Date</th>
+              <th>Transaction ID</th>
+              <th>Payment Amount</th>
+              <th>Payment Date</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <h3>Pending Payments</h3>
+        <table id="pendingTableReport">
+          <thead>
+            <tr>
+              <th>Transaction ID</th>
+              <th>Amount</th>
+              <th>Date</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <h3>Pending Bills</h3>
+        <table id="pendingBillsTableReport">
+          <thead>
+            <tr>
+              <th>Bill No</th>
+              <th>Amount</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    function generateReport() {
+      // Get yesterday's date for the report header
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const formattedDate = yesterday.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+
+      // Set the report date in the header
+      document.getElementById("reportDate").textContent = formattedDate;
+
+      const bills = JSON.parse(localStorage.getItem("bills") || "[]");
+      const payments = JSON.parse(localStorage.getItem("payments") || "[]");
+
+      const matchedRows = [];
+      const usedBills = new Set();
+      const unmatchedPayments = [];
+      const unmatchedBills = [];
+
+      payments.forEach(p => {
+        const match = bills.find(b => b.amount === p.amount && !usedBills.has(b.billNo));
+        if (match) {
+          usedBills.add(match.billNo);
+          matchedRows.push({
+            billNo: match.billNo,
+            billAmount: match.amount,
+            billDate: match.date,
+            transactionId: p.transactionId,
+            paymentAmount: p.amount,
+            paymentDate: p.date,
+            source: p.source
+          });
+        } else {
+          unmatchedPayments.push(p);
+        }
+      });
+
+      bills.forEach(b => {
+        if (!usedBills.has(b.billNo)) {
+          unmatchedBills.push(b);
+        }
+      });
+
+      // Filling the tables for report
+      const matchedTable = document.querySelector("#matchedTableReport tbody");
+      const pendingPaymentsTable = document.querySelector("#pendingTableReport tbody");
+      const pendingBillsTable = document.querySelector("#pendingBillsTableReport tbody");
+
+      matchedTable.innerHTML = "";
+      pendingPaymentsTable.innerHTML = "";
+      pendingBillsTable.innerHTML = "";
+
+      matchedRows.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${row.billNo}</td>
+          <td>${row.billAmount}</td>
+          <td>${row.billDate}</td>
+          <td>${row.transactionId}</td>
+          <td>${row.paymentAmount}</td>
+          <td>${row.paymentDate}</td>
+          <td>${row.source}</td>
+        `;
+        matchedTable.appendChild(tr);
+      });
+
+      unmatchedPayments.forEach(payment => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${payment.transactionId}</td>
+          <td>${payment.amount}</td>
+          <td>${payment.date}</td>
+          <td>${payment.source}</td>
+        `;
+        pendingPaymentsTable.appendChild(tr);
+      });
+
+      unmatchedBills.forEach(bill => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${bill.billNo}</td>
+          <td>${bill.amount}</td>
+          <td>${bill.date}</td>
+        `;
+        pendingBillsTable.appendChild(tr);
+      });
+
+      document.getElementById("reportSection").style.display = "block";
+      window.print(); // Trigger print dialog
+    }
+  </script>
+</body>
+</html>

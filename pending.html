@@ -1,0 +1,112 @@
+<!-- Save as: pending.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🕒 Pending Payments</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>📘 Menu</h2>
+      <nav>
+        <ul>
+          <li><a href="dashboard.html">📊 Dashboard</a></li>
+          <li><a href="bill.html">🧾 Bill Entry</a></li>
+          <li><a href="payment.html">💰 Payment Entry</a></li>
+          <li><a href="match.html">🔄 Match Payments</a></li>
+          <li><a href="pending.html">🕒 Pending</a></li>
+          <li><a href="report.html">🖨️ Reports</a></li>
+          <li><button onclick="resetAll()">🧹 Reset All</button></li>
+        </ul>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <h2>🕒 Pending Payments</h2>
+
+      <h3>Unmatched Payments</h3>
+      <table id="pendingTable">
+        <thead>
+          <tr>
+            <th>Transaction ID</th>
+            <th>Amount</th>
+            <th>Date</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <h3>Unmatched Bills</h3>
+      <table id="pendingBillsTable">
+        <thead>
+          <tr>
+            <th>Bill No</th>
+            <th>Amount</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    renderPendingData();
+
+    function renderPendingData() {
+      const bills = JSON.parse(localStorage.getItem("bills") || "[]");
+      const payments = JSON.parse(localStorage.getItem("payments") || "[]");
+
+      const usedBills = new Set();
+      const unmatchedPayments = [];
+      const unmatchedBills = [];
+
+      payments.forEach(p => {
+        const match = bills.find(b => b.amount === p.amount && !usedBills.has(b.billNo));
+        if (!match) {
+          unmatchedPayments.push(p);
+        } else {
+          usedBills.add(match.billNo);
+        }
+      });
+
+      bills.forEach(b => {
+        if (!usedBills.has(b.billNo)) {
+          unmatchedBills.push(b);
+        }
+      });
+
+      const pendingPaymentsTable = document.querySelector("#pendingTable tbody");
+      const pendingBillsTable = document.querySelector("#pendingBillsTable tbody");
+
+      pendingPaymentsTable.innerHTML = "";
+      pendingBillsTable.innerHTML = "";
+
+      unmatchedPayments.forEach(payment => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${payment.transactionId}</td>
+          <td>${payment.amount}</td>
+          <td>${payment.date}</td>
+          <td>${payment.source}</td>
+        `;
+        pendingPaymentsTable.appendChild(tr);
+      });
+
+      unmatchedBills.forEach(bill => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${bill.billNo}</td>
+          <td>${bill.amount}</td>
+          <td>${bill.date}</td>
+        `;
+        pendingBillsTable.appendChild(tr);
+      });
+    }
+  </script>
+</body>
+</html>

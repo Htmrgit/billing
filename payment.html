@@ -1,0 +1,227 @@
+<!-- Save as: payment.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>💰 Payment Entry</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>📘 Menu</h2>
+      <nav>
+        <ul>
+          <li><a href="dashboard.html">📊 Dashboard</a></li>
+          <li><a href="bill.html">🧾 Bill Entry</a></li>
+          <li><a href="payment.html">💰 Payment Entry</a></li>
+          <li><a href="match.html">🔄 Match Payments</a></li>
+          <li><a href="pending.html">🕒 Pending</a></li>
+          <li><a href="report.html">🖨️ Reports</a></li>
+          <li><button onclick="resetAll()">🧹 Reset All</button></li>
+        </ul>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <h2>💰 Payment Entry</h2>
+
+      <form id="paymentForm">
+        <input type="text" id="transactionId" placeholder="Transaction ID" readonly required />
+        <input type="number" id="paymentAmount" placeholder="Amount" required />
+        <input type="date" id="paymentDate" required />
+        <select id="paymentSource" required>
+          <option value="">--Select Source--</option>
+          <option value="Paytm Business">Paytm Business</option>
+          <option value="Paytm UPI">Paytm UPI</option>
+          <option value="PhonePe">PhonePe</option>
+          <option value="Google Pay">Google Pay</option>
+          <option value="Other">Other</option>
+        </select>
+        <input type="hidden" id="paymentIndex" />
+        <button type="submit">Save Payment</button>
+      </form>
+
+      <div style="margin-top: 1rem;">
+        <input type="text" id="searchInput" placeholder="🔍 Search Payments..." oninput="renderPaymentTable()" />
+        <input type="file" accept=".csv" id="csvFile" onchange="importCSV()" />
+        <button onclick="clearOldPayments()">🧹 Auto-Clear Old</button>
+      </div>
+
+      <h3>Saved Payments</h3>
+      <table id="paymentTable">
+        <thead>
+          <tr>
+            <th>Transaction ID</th>
+            <th>Amount</th>
+            <th>Date</th>
+            <th>Source</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <h3>📊 Payment Source Chart</h3>
+      <canvas id="paymentChart" height="100"></canvas>
+    </main>
+  </div>
+
+  <script>
+    function getYesterdayDate() {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      return d.toISOString().split('T')[0];
+    }
+
+    function generateUniqueId() {
+      return 'TXN' + Date.now();
+    }
+
+    document.getElementById("paymentDate").value = getYesterdayDate();
+    document.getElementById("paymentSource").value = "Paytm Business";
+    document.getElementById("transactionId").value = generateUniqueId();
+
+    document.getElementById("paymentForm").addEventListener("submit", savePayment);
+    renderPaymentTable();
+
+    function savePayment(e) {
+      e.preventDefault();
+      const transactionId = document.getElementById("transactionId").value.trim();
+      const amount = parseFloat(document.getElementById("paymentAmount").value);
+      const date = document.getElementById("paymentDate").value;
+      const source = document.getElementById("paymentSource").value;
+      const index = document.getElementById("paymentIndex").value;
+
+      let payments = JSON.parse(localStorage.getItem("payments") || "[]");
+
+      if (index === "" && payments.some(p => p.transactionId === transactionId)) {
+        alert("❌ Transaction ID must be unique!");
+        return;
+      }
+
+      const paymentData = { transactionId, amount, date, source };
+
+      if (index === "") {
+        payments.push(paymentData);
+      } else {
+        payments[parseInt(index)] = paymentData;
+      }
+
+      localStorage.setItem("payments", JSON.stringify(payments));
+      document.getElementById("paymentForm").reset();
+      document.getElementById("paymentDate").value = getYesterdayDate();
+      document.getElementById("paymentSource").value = "Paytm Business";
+      document.getElementById("transactionId").value = generateUniqueId();
+      renderPaymentTable();
+    }
+
+    function renderPaymentTable() {
+      const tbody = document.querySelector("#paymentTable tbody");
+      const search = document.getElementById("searchInput").value.toLowerCase();
+      const payments = JSON.parse(localStorage.getItem("payments") || "[]");
+      tbody.innerHTML = "";
+
+      const filtered = payments.filter(p =>
+        p.transactionId.toLowerCase().includes(search) ||
+        p.source.toLowerCase().includes(search)
+      );
+
+      filtered.forEach((payment, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${payment.transactionId}</td>
+          <td>${payment.amount}</td>
+          <td>${payment.date}</td>
+          <td>${payment.source}</td>
+          <td>
+            <button onclick="editPayment(${index})">✏️ Edit</button>
+            <button onclick="deletePayment(${index})">🗑️ Delete</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      renderChart(filtered);
+    }
+
+    function editPayment(index) {
+      const payments = JSON.parse(localStorage.getItem("payments") || "[]");
+      const p = payments[index];
+      document.getElementById("transactionId").value = p.transactionId;
+      document.getElementById("paymentAmount").value = p.amount;
+      document.getElementById("paymentDate").value = p.date;
+      document.getElementById("paymentSource").value = p.source;
+      document.getElementById("paymentIndex").value = index;
+    }
+
+    function deletePayment(index) {
+      const payments = JSON.parse(localStorage.getItem("payments") || "[]");
+      payments.splice(index, 1);
+      localStorage.setItem("payments", JSON.stringify(payments));
+      renderPaymentTable();
+    }
+
+    function importCSV() {
+      const file = document.getElementById("csvFile").files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const lines = reader.result.trim().split("\n");
+        const data = lines.slice(1);
+        let payments = JSON.parse(localStorage.getItem("payments") || "[]");
+
+        data.forEach(line => {
+          const [transactionId, amount, date, source] = line.split(",").map(x => x.trim());
+          if (!payments.some(p => p.transactionId === transactionId)) {
+            payments.push({ transactionId, amount: parseFloat(amount), date, source });
+          }
+        });
+        localStorage.setItem("payments", JSON.stringify(payments));
+        renderPaymentTable();
+        alert("✅ CSV Imported");
+      };
+      reader.readAsText(file);
+    }
+
+    function clearOldPayments() {
+      const confirmClear = confirm("Clear all entries before today?");
+      if (!confirmClear) return;
+      const today = new Date().toISOString().split("T")[0];
+      const payments = JSON.parse(localStorage.getItem("payments") || "[]")
+        .filter(p => p.date >= today);
+      localStorage.setItem("payments", JSON.stringify(payments));
+      renderPaymentTable();
+    }
+
+    function renderChart(data) {
+      const ctx = document.getElementById("paymentChart").getContext("2d");
+      const sources = {};
+      data.forEach(p => {
+        sources[p.source] = (sources[p.source] || 0) + p.amount;
+      });
+
+      if (window.paymentChart) window.paymentChart.destroy();
+      window.paymentChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: Object.keys(sources),
+          datasets: [{
+            label: "Total Payment by Source",
+            data: Object.values(sources),
+            backgroundColor: "#4caf50"
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: "Payment Summary" }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

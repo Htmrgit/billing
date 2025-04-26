@@ -1,0 +1,104 @@
+<!-- Save as: login.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🔐 Login Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .login-box {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      width: 300px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    input, button {
+      width: 100%;
+      padding: 0.7rem;
+      margin: 0.5rem 0;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+    }
+    input {
+      background: #fff;
+      color: #000;
+    }
+    button {
+      background: #4caf50;
+      color: #fff;
+      cursor: pointer;
+    }
+    .toggle {
+      text-align: center;
+      margin-top: 1rem;
+      cursor: pointer;
+      color: #ffeb3b;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h2 id="formTitle">🔐 Login</h2>
+    <form id="authForm">
+      <input type="text" id="username" placeholder="Username" required />
+      <input type="password" id="passcode" placeholder="Passcode" required />
+      <button type="submit" id="submitBtn">Login</button>
+    </form>
+    <div class="toggle" onclick="toggleForm()">Don't have an account? Sign up</div>
+  </div>
+
+  <script>
+    let isSignup = false;
+
+    function toggleForm() {
+      isSignup = !isSignup;
+      document.getElementById("formTitle").innerText = isSignup ? "📝 Signup" : "🔐 Login";
+      document.getElementById("submitBtn").innerText = isSignup ? "Signup" : "Login";
+      document.querySelector(".toggle").innerText = isSignup
+        ? "Already have an account? Login"
+        : "Don't have an account? Sign up";
+    }
+
+    document.getElementById("authForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const username = document.getElementById("username").value.trim();
+      const passcode = document.getElementById("passcode").value;
+
+      if (isSignup) {
+        if (localStorage.getItem("account")) {
+          alert("⚠️ Account already exists. You can only have one account.");
+          return;
+        }
+        const account = { username, passcode };
+        localStorage.setItem("account", JSON.stringify(account));
+        alert("✅ Signup successful! Please login.");
+        toggleForm();
+      } else {
+        const stored = JSON.parse(localStorage.getItem("account"));
+        if (!stored || stored.username !== username || stored.passcode !== passcode) {
+          alert("❌ Invalid username or passcode");
+          return;
+        }
+        sessionStorage.setItem("loggedIn", "true");
+        window.location.href = "dashboard.html";
+      }
+    });
+  </script>
+</body>
+</html>
